@@ -11,7 +11,27 @@
 
 import type { Benefit, PriceEstimate } from './types.js';
 
-const NUM = /([0-9][0-9,]*)/;
+// 금액 토큰: 아라비아(1,000) + 한글 수사(1천·천·5백·1만5천)
+const WON =
+  '([0-9][0-9,]*|(?:[1-9]\\s*)?만(?:\\s*[1-9]?\\s*천)?(?:\\s*[1-9]?\\s*백)?|(?:[1-9]\\s*)?천(?:\\s*[1-9]?\\s*백)?|[1-9]?\\s*백)';
+// 절대 최종가 판정엔 모호한 '커피/한잔' 제외 — 원두커피 등 오탐 방지
+const DRINK_STRICT = '아메리카노|라떼|라테|블렌디드|프라푸치노|음료';
+// 'N원' 뒤에 오면 최종가가 아님 (할인/적립/상품권/조건 등)
+const ABS_EXCLUDE = '할인|쿠폰|증정|캐시백|페이백|적립|이상|권|상당';
+
+/** 금액 문자열 → 숫자. '1,000'→1000, '1천'→1000, '천'→1000, '5백'→500, '1만'→10000. */
+export function wonToNumber(raw: string): number | null {
+  const s = raw.replace(/[\s,]/g, '');
+  if (/^[0-9]+$/.test(s)) return Number(s);
+  let total = 0;
+  const man = s.match(/([1-9]?)만/);
+  if (man) total += (man[1] ? Number(man[1]) : 1) * 10000;
+  const cheon = s.match(/([1-9]?)천/);
+  if (cheon) total += (cheon[1] ? Number(cheon[1]) : 1) * 1000;
+  const baek = s.match(/([1-9]?)백/);
+  if (baek) total += (baek[1] ? Number(baek[1]) : 1) * 100;
+  return total > 0 ? total : null;
+}
 
 /** "20%" → 20 (0<pct<=100 만 인정). 여러 개면 가장 큰 값. */
 export function parsePercentFromText(text: string): number | null {
@@ -29,11 +49,30 @@ export function parsePercentFromText(text: string): number | null {
  * '적립'(이연 포인트)은 즉시 체감가가 아니므로 제외 — 과대평가 방지.
  */
 export function parseAmountFromText(text: string): number | null {
-  const re = new RegExp(`${NUM.source}\\s*원\\s*(?:할인|쿠폰|증정|캐시백|페이백)`, 'g');
+  const re = new RegExp(`${WON}\\s*원\\s*(?:할인|쿠폰|증정|캐시백|페이백)`, 'g');
   let best: number | null = null;
   for (const m of text.matchAll(re)) {
-    const v = Number(m[1].replace(/,/g, ''));
-    if (v > 0 && (best == null || v > best)) best = v;
+    const v = wonToNumber(m[1]);
+    if (v != null && v > 0 && (best == null || v > best)) best = v;
+  }
+  return best;
+}
+
+/**
+ * 음료 + "N원" 절대 최종가 ("아메리카노 100원", "라떼 1천원").
+ * 할인/적립/상품권 키워드가 뒤따르면 제외(= 할인·적립이지 최종가 아님).
+ * 정가 미만 + 50원 이상만 인정. 여러 개면 최저가.
+ */
+export function parseAbsoluteDrinkPrice(text: string, listPrice: number): number | null {
+  const re = new RegExp(
+    `(?:${DRINK_STRICT})[^\\n]{0,8}?${WON}\\s*원(?!\\s*(?:${ABS_EXCLUDE}))`,
+    'g',
+  );
+  let best: number | null = null;
+  for (const m of text.matchAll(re)) {
+    const v = wonToNumber(m[1]);
+    if (v == null || v < 50 || v >= listPrice) continue;
+    if (best == null || v < best) best = v;
   }
   return best;
 }
@@ -124,6 +163,12 @@ export function estimateNetPrice(benefit: Benefit, listPrice: number): PriceEsti
     return { net, ...pct(net, listPrice), confidence: 'medium', basis: `${amt}원 할인` };
   }
 
-  // 6) 산정 불가
+  // 6) 절대 최종가 ("아메리카노 100원", "라떼 1천원") — 음료 자체 판매가. 조건부 프로모 많아 low.
+  const abs = goodsOnly ? null : parseAbsoluteDrinkPrice(text, listPrice);
+  if (abs != null) {
+    return { net: abs, ...pct(abs, listPrice), confidence: 'low', basis: `최종가 ${abs}원` };
+  }
+
+  // 7) 산정 불가
   return null;
 }

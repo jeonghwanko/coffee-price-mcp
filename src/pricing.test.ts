@@ -3,6 +3,8 @@ import {
   parsePercentFromText,
   parseAmountFromText,
   parseBogo,
+  parseAbsoluteDrinkPrice,
+  wonToNumber,
   detectFreeDrink,
   estimateNetPrice,
 } from './pricing.js';
@@ -27,6 +29,38 @@ describe('parseAmountFromText', () => {
   });
   it('returns null without keyword', () => {
     expect(parseAmountFromText('아메리카노 4500원')).toBeNull();
+  });
+  it('parses 한글 수사 (1천원 할인)', () => {
+    expect(parseAmountFromText('1천원 할인')).toBe(1000);
+    expect(parseAmountFromText('5백원 쿠폰')).toBe(500);
+  });
+});
+
+describe('wonToNumber', () => {
+  it('parses arabic and korean numerals', () => {
+    expect(wonToNumber('1,000')).toBe(1000);
+    expect(wonToNumber('1천')).toBe(1000);
+    expect(wonToNumber('천')).toBe(1000);
+    expect(wonToNumber('5백')).toBe(500);
+    expect(wonToNumber('1만')).toBe(10000);
+    expect(wonToNumber('1만5천')).toBe(15000);
+  });
+});
+
+describe('parseAbsoluteDrinkPrice', () => {
+  const LIST = 1500;
+  it('catches 음료 + 절대 최종가', () => {
+    expect(parseAbsoluteDrinkPrice('첫 결제 시 아메리카노 100원', LIST)).toBe(100);
+    expect(parseAbsoluteDrinkPrice('기념 아메리카노 1천원', LIST)).toBe(1000);
+  });
+  it('does NOT fire on 할인/적립/상품권', () => {
+    expect(parseAbsoluteDrinkPrice('아메리카노 500원 할인', LIST)).toBeNull();
+    expect(parseAbsoluteDrinkPrice('음료 1만원 이상 결제 시', LIST)).toBeNull();
+    expect(parseAbsoluteDrinkPrice('커피 상품권 5천원권 증정', LIST)).toBeNull();
+  });
+  it('rejects price >= 정가 and goods-only', () => {
+    expect(parseAbsoluteDrinkPrice('아메리카노 4500원', 4500)).toBeNull();
+    expect(parseAbsoluteDrinkPrice('원두 5천원', LIST)).toBeNull();
   });
 });
 
@@ -107,5 +141,17 @@ describe('estimateNetPrice', () => {
   it('7b) percent that DOES mention drink still applies', () => {
     const e = estimateNetPrice(benefit({ title: '아메리카노 포함 음료 20% 할인' }), 4500)!;
     expect(e.net).toBe(3600);
+  });
+
+  it('8) absolute final price (첫 결제 100원) → net 100, low', () => {
+    const e = estimateNetPrice(benefit({ brand: 'compose', title: '카카오페이 첫 결제 시 아메리카노 100원' }), 1500)!;
+    expect(e.net).toBe(100);
+    expect(e.confidence).toBe('low');
+    expect(e.basis).toBe('최종가 100원');
+  });
+
+  it('8b) absolute final price 한글 (아메리카노 1천원) → 1000', () => {
+    const e = estimateNetPrice(benefit({ brand: 'compose', title: '고객 만족도 1위 기념 아메리카노 1천원' }), 1500)!;
+    expect(e.net).toBe(1000);
   });
 });
