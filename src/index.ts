@@ -15,6 +15,10 @@ import {
   verifyReceiptPriceInput,
   verifyReceiptPriceHandler,
 } from './tools/verifyReceiptPrice.js';
+import {
+  getCardBenefitsInput,
+  getCardBenefitsHandler,
+} from './tools/getCardBenefits.js';
 
 const server = new McpServer({
   name: 'coffee-price',
@@ -40,6 +44,13 @@ server.tool(
   '내가 낸 커피 가격이 적정한지 점검. 정가와 오늘 최저 체감가를 비교해 great/fair/overpaid 판정 + 더 나은 혜택을 제시한다. (영수증 제출이 아니라 가격 점검용 read-only)',
   verifyReceiptPriceInput,
   verifyReceiptPriceHandler,
+);
+
+server.tool(
+  'get_card_benefits',
+  '카드사/통신사/페이별 커피 혜택 모아보기. 유저가 어떤 카드를 쓰는지 모를 때 발급사별로 그룹핑해 보여준다. 즉시 할인은 체감가(estimatedPrice)로, 캐시백·적립 등은 정보성으로 함께 노출. card 인자로 특정 발급사만 필터.',
+  getCardBenefitsInput,
+  getCardBenefitsHandler,
 );
 
 async function main() {
