@@ -1,0 +1,52 @@
+{
+  "name": "coffee-price-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "오늘 커피 가장 싸게 먹는 법 — coffee.pryzm.gg 공개 혜택 API 기반 read-only MCP 서버",
+  "license": "MIT",
+  "author": "jeonghwanko",
+  "homepage": "https://github.com/jeonghwanko/coffee-price-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jeonghwanko/coffee-price-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jeonghwanko/coffee-price-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "coffee",
+    "korea",
+    "claude",
+    "codex",
+    "gemini"
+  ],
+  "bin": {
+    "coffee-price-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
