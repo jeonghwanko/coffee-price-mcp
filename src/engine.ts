@@ -1,6 +1,6 @@
 // 랭킹 엔진 — get_cheapest_coffee 와 verify_receipt_price 가 공유.
 import { fetchAllBenefits, fetchTodayBenefits, fetchServerCheapest } from './apiClient.js';
-import { estimateNetPrice } from './pricing.js';
+import { estimateNetPrice, appliesToMenu, canonicalMenu } from './pricing.js';
 import { getListPrice, DEFAULT_MENU } from './menuPrices.js';
 import { providerLabel, normalizeMemberships } from './providers.js';
 import type { Benefit, RankedDeal } from './types.js';
@@ -80,7 +80,7 @@ export async function getRankedDeals(opts: RankOptions): Promise<RankedDeal[]> {
   if (server) return server as RankedDeal[];
 
   // ── 폴백: 로컬 체감가 엔진 (서버 엔드포인트 배포 전) ──
-  const menu = opts.menu ?? DEFAULT_MENU;
+  const menu = canonicalMenu(opts.menu ?? DEFAULT_MENU);
   const brandFilter = opts.brands?.length ? new Set(opts.brands.map((b) => b.toLowerCase())) : null;
   const hasMembershipFilter = (opts.memberships?.length ?? 0) > 0;
 
@@ -97,6 +97,10 @@ export async function getRankedDeals(opts: RankOptions): Promise<RankedDeal[]> {
 
     const listPrice = getListPrice(b.brand, menu);
     if (listPrice == null) continue; // 정가 미상 브랜드
+
+    // 메뉴 매칭: 다른 메뉴 전용 혜택(예: 라떼 요청에 '아메리카노 500원 할인')은 제외
+    const text = [b.title, b.conditions].filter(Boolean).join(' ');
+    if (!appliesToMenu(text, menu)) continue;
 
     const est = estimateNetPrice(b, listPrice);
     if (!est) continue;

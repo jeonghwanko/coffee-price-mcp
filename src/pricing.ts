@@ -172,3 +172,27 @@ export function estimateNetPrice(benefit: Benefit, listPrice: number): PriceEsti
   // 7) 산정 불가
   return null;
 }
+
+// ── 메뉴 매칭 ──────────────────────────────────────────────────────────────
+// 혜택은 특정 메뉴를 겨냥("아메리카노 500원 할인")하거나 메뉴 무관("전 음료 20%")이다.
+// "라떼 싸게"를 물으면 아메리카노 전용 쿠폰은 빠져야 한다.
+
+/** 요청 메뉴를 정가 테이블 키로 정규화 ('카페라떼'·'라테' → '라떼', 그 외 → '아메리카노'). */
+export function canonicalMenu(menu?: string | null): '아메리카노' | '라떼' {
+  return menu && /라\s*떼|라\s*테/.test(menu) ? '라떼' : '아메리카노';
+}
+
+/** 제목이 명시적으로 겨냥하는 코어 메뉴 집합. 미명시(전음료·결제할인 등)면 null = 메뉴 무관. */
+export function benefitMenus(text: string): Set<'아메리카노' | '라떼'> | null {
+  const s = new Set<'아메리카노' | '라떼'>();
+  if (/라\s*떼|라\s*테/.test(text)) s.add('라떼');
+  if (/아메리카노/.test(text)) s.add('아메리카노');
+  return s.size ? s : null;
+}
+
+/** 혜택이 요청 메뉴에 적용 가능한가. 메뉴 미명시 혜택은 항상 true(전 메뉴 적용). */
+export function appliesToMenu(text: string, menu?: string | null): boolean {
+  const m = benefitMenus(text);
+  if (!m) return true;
+  return m.has(canonicalMenu(menu));
+}

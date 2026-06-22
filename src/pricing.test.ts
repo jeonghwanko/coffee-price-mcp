@@ -7,6 +7,9 @@ import {
   wonToNumber,
   detectFreeDrink,
   estimateNetPrice,
+  canonicalMenu,
+  benefitMenus,
+  appliesToMenu,
 } from './pricing.js';
 import type { Benefit } from './types.js';
 
@@ -153,5 +156,24 @@ describe('estimateNetPrice', () => {
   it('8b) absolute final price 한글 (아메리카노 1천원) → 1000', () => {
     const e = estimateNetPrice(benefit({ brand: 'compose', title: '고객 만족도 1위 기념 아메리카노 1천원' }), 1500)!;
     expect(e.net).toBe(1000);
+  });
+});
+
+describe('menu matching', () => {
+  it('canonicalMenu normalizes latte variants', () => {
+    expect(canonicalMenu('카페라떼')).toBe('라떼');
+    expect(canonicalMenu('라테')).toBe('라떼');
+    expect(canonicalMenu('아메리카노')).toBe('아메리카노');
+    expect(canonicalMenu(undefined)).toBe('아메리카노');
+  });
+  it('benefitMenus detects targeted core menu, null if agnostic', () => {
+    expect(benefitMenus('아메리카노 500원 할인')).toEqual(new Set(['아메리카노']));
+    expect(benefitMenus('카페라떼 1+1')).toEqual(new Set(['라떼']));
+    expect(benefitMenus('전 음료 20% 할인')).toBeNull();
+  });
+  it('appliesToMenu gates menu-specific, passes agnostic', () => {
+    expect(appliesToMenu('아메리카노 500원 할인', '라떼')).toBe(false);
+    expect(appliesToMenu('아메리카노 500원 할인', '아메리카노')).toBe(true);
+    expect(appliesToMenu('전 음료 20% 할인', '라떼')).toBe(true);
   });
 });
