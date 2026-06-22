@@ -1,10 +1,17 @@
 # ☕ coffee-price-mcp
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-3C873A.svg)](https://nodejs.org)
+[![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-0EA5E9.svg)](https://modelcontextprotocol.io)
+[![Works with](https://img.shields.io/badge/works_with-Claude_·_Codex_·_Gemini-7C3AED.svg)](#-빠른-연결-설치-불필요)
+
 **"오늘 커피 가장 싸게 먹는 법"** — read-only MCP 서버.
+
+> An MCP server that ranks **today's cheapest coffee in Korea** by *real out-of-pocket price* (list price − telecom/card/coupon perks). Plugs into Claude Code, OpenAI Codex, and Gemini CLI in one line.
 
 [coffee.pryzm.gg](https://coffee.pryzm.gg) 의 공개 브랜드 혜택 API(`/coffeecong/brand-benefits/*`)를 감싸고, 브랜드별 메뉴 **정가 상수**로 **체감가(정가 − 할인)** 를 계산해 랭킹합니다. DB·시크릿 없음 — 공개 API만 호출하는 얇은 래퍼라서 그대로 가져다 쓰면 됩니다.
 
-> Claude Code · OpenAI Codex · Gemini CLI 어디서든 **한 줄**로 연결됩니다. 설치(clone/build)도 필요 없습니다 — `npx` 가 GitHub에서 바로 받아 빌드·실행합니다.
+🔗 **소개 페이지:** [coffee.pryzm.gg/coffee/mcp.html](https://coffee.pryzm.gg/coffee/mcp.html) · **데모:** AI에 연결하고 *"오늘 제일 싼 커피는?"* 한마디면 끝.
 
 ---
 
@@ -68,6 +75,30 @@ args = ["-y", "github:jeonghwanko/coffee-price-mcp"]
 
 ---
 
+## 📋 예시
+
+AI에게 평소 말투로 물어보면, AI가 `get_cheapest_coffee` 를 호출해 이렇게 답합니다:
+
+```
+🙋 오늘 제일 싼 커피는?
+
+🤖 오늘 기준 아메리카노 체감가 TOP 3예요.
+
+   🥇 할리스커피   0원      (정가 4,100) — KT VVIP, 아메리카노 2잔 무료
+   🥈 스타벅스     0원      (정가 4,500) — LG U+ VVIP/VIP, 1잔 무료
+   🥉 컴포즈커피   1,000원  (정가 1,500) — 조건 없음, 누구나
+
+   👉 멤버십이 없다면 컴포즈 1,000원이 사실상 최저가예요.
+```
+
+멤버십/카드를 알려주면 본인이 받을 수 있는 혜택만 골라 다시 랭킹합니다:
+
+```
+🙋 나 SKT랑 현대카드 있어. 오늘 라떼 싸게 마시려면?
+```
+
+---
+
 ## 🛠 Tools (모두 read-only)
 
 | tool | 설명 | 주요 인자 |
@@ -93,6 +124,8 @@ args = ["-y", "github:jeonghwanko/coffee-price-mcp"]
 
 원두·MD·굿즈 등 **음료가 아닌 대상의 할인은 제외**합니다(제목 가드). 마케팅 요약은 오탐이 잦아 파싱에서 제외.
 
+> ⚠️ **체감가는 정가(코드 상수) − 혜택(제목 파싱) 추정치입니다.** 등급·선착순·중복 불가 등 실제 적용 조건은 각 혜택의 `sourceUrl` 을 확인하세요. 정가는 2026 기준 근사값입니다.
+
 ---
 
 ## ⚙️ 환경변수
@@ -101,7 +134,15 @@ args = ["-y", "github:jeonghwanko/coffee-price-mcp"]
 |------|--------|------|
 | `COFFEE_API_BASE` | `https://coffee.pryzm.gg/api` | 혜택 API 베이스. 로컬 개발 시 `http://localhost:4000` |
 
-config의 `env` 블록으로 덮어쓸 수 있습니다.
+config의 `env` 블록으로 덮어쓸 수 있습니다:
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "github:jeonghwanko/coffee-price-mcp"],
+  "env": { "COFFEE_API_BASE": "https://coffee.pryzm.gg/api" }
+}
+```
 
 ---
 
